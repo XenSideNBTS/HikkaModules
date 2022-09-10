@@ -20,7 +20,7 @@ class LogFlooder(loader.Module):
 
     strings = {"name": "⚠️Log Flood🤡"}
 
-    async def podkatcmd(self, message: Message):
+    async def lfstartcmd(self, message: Message):
         "💬Флудит логи чата💬 ⚠️МОЖНО ПОЛУЧИТЬ ФЛУДВЕЙТ!!!!⚠️"
         for _ in range(500):
             for anim in [".", ".."]:
