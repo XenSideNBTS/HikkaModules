@@ -1,4 +1,4 @@
-__version__ = (0, 3, 2)
+__version__ = (0, 3, 3)
 
 
 #░█░█░█▀▀░█▀█░█▀▀░▀█▀░█▀▄░█▀▀
@@ -138,3 +138,10 @@ class XenAnims(loader.Module):
             for anim in ["<emoji document_id=5192765204898783881>💜</emoji><emoji document_id=5195311729663286630>💜</emoji><emoji document_id=5195045669324201904>💜</emoji>: Начинаю получение прав администратора...<emoji document_id=5789844634901417073>💜</emoji>", "8%◆◇◇◇◇◇◇◇◇◇", "15%◆◆◇◇◇◇◇◇◇◇", "23%◆◆◆◇◇◇◇◇◇◇", "75%◆◆◆◆◆◆◆◆◇◇", "86%◆◆◆◆◆◆◆◆◆◇", "100%◆◆◆◆◆◆◆◆◆◆", "<emoji document_id=5192765204898783881>💜</emoji><emoji document_id=5195311729663286630>💜</emoji><emoji document_id=5195045669324201904>💜</emoji>: Лог успешно получен, начинаю редактирование manifest.json<emoji document_id=5789764439272066504>💜</emoji>", "38%◆◇◇◇◇◇◇◇◇◇", "64%◆◆◆◆◆◆◆◇◇◇", "75%◆◆◆◆◆◆◆◆◇◇", "86%◆◆◆◆◆◆◆◆◆◇", "100%◆◆◆◆◆◆◆◆◆◆", "<emoji document_id=5192765204898783881>💜</emoji><emoji document_id=5195311729663286630>💜</emoji><emoji document_id=5195045669324201904>💜</emoji>: Редактирую admins.js<emoji document_id=5789853954980449405>💜</emoji>", "38%◆◇◇◇◇◇◇◇◇◇", "64%◆◆◆◆◆◆◆◇◇◇", "75%◆◆◆◆◆◆◆◆◇◇", "86%◆◆◆◆◆◆◆◆◆◇", "100%◆◆◆◆◆◆◆◆◆◆", "✅ Успешно!", "<emoji document_id=5192765204898783881>💜</emoji><emoji document_id=5195311729663286630>💜</emoji><emoji document_id=5195045669324201904>💜</emoji>: Загружаю файлы в датабазу...<emoji document_id=5789844634901417073>💜</emoji>", "<emoji document_id=5192765204898783881>💜</emoji><emoji document_id=5195311729663286630>💜</emoji><emoji document_id=5195045669324201904>💜</emoji>: Чтобы получить права, перейдите на  https://clck.ru/9TFat После чего введите в чат полученный PIN-КОД<emoji document_id=5789844634901417073>💜</emoji>"]:
                 message = await utils.answer(message, anim)
                 await asyncio.sleep(2.0)
+                
+    async def zigacmd(self, message: Message):
+        "卍 вы пон крч"
+        for _ in range(80):
+            for anim in ["卍卍卍卍卍卍卍卍ㅤㅤㅤㅤㅤ卍\nㅤㅤㅤㅤㅤㅤㅤ卍ㅤㅤㅤㅤㅤㅤ卍\nㅤㅤㅤㅤㅤㅤㅤ卍ㅤㅤㅤㅤㅤㅤ卍\n", "卍卍卍卍卍卍卍卍ㅤㅤㅤㅤㅤ卍\nㅤㅤㅤㅤㅤㅤㅤ卍ㅤㅤㅤㅤㅤㅤ卍\nㅤㅤㅤㅤㅤㅤㅤ卍ㅤㅤㅤㅤㅤㅤ卍\nㅤㅤㅤㅤㅤㅤㅤ卍ㅤㅤㅤㅤㅤㅤ卍\nㅤㅤㅤㅤㅤㅤㅤ卍ㅤㅤㅤㅤㅤㅤ卍\n卍卍卍卍卍卍卍卍卍卍卍卍卍卍\n卍ㅤㅤㅤㅤㅤㅤ卍\n", "卍卍卍卍卍卍卍卍ㅤㅤㅤㅤㅤ卍\nㅤㅤㅤㅤㅤㅤㅤ卍ㅤㅤㅤㅤㅤㅤ卍\nㅤㅤㅤㅤㅤㅤㅤ卍ㅤㅤㅤㅤㅤㅤ卍\nㅤㅤㅤㅤㅤㅤㅤ卍ㅤㅤㅤㅤㅤㅤ卍\nㅤㅤㅤㅤㅤㅤㅤ卍ㅤㅤㅤㅤㅤㅤ卍\n卍卍卍卍卍卍卍卍卍卍卍卍卍卍\n卍ㅤㅤㅤㅤㅤㅤ卍\n卍ㅤㅤㅤㅤㅤㅤ卍\n卍ㅤㅤㅤㅤㅤㅤ卍\n卍ㅤㅤㅤㅤㅤㅤ卍\n卍ㅤㅤㅤㅤㅤㅤ卍卍卍卍卍卍卍卍\n"]:
+                message = await utils.answer(message, anim)
+                await asyncio.sleep(0.7)
