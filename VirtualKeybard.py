@@ -21,7 +21,7 @@ class VirtualKeyboardMod(loader.Module):
     def __init__(self):
         self.current_text = {}
     
-    @loader.command(ru_doc=".keyb - Показать виртуальную клавиатуру")
+    @loader.command(ru_doc=".keyb - Показать виртуальную клавиатуру ГАЙД: @XENSIDEMOD")
     async def keyb(self, message: Message):
         chat_id = str(message.chat_id)
         if chat_id not in self.current_text:
