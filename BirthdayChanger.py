@@ -46,10 +46,12 @@ class BirthdayChangerMod(loader.Module):
         if self.config["enabled"]:
             self.task = asyncio.create_task(self._birthday_loop())
 
-    async def _update_birthday(self):
-        now_msk = datetime.now(self.moscow_tz)
-        birth_year = now_msk.year - self.config["age"]
-        birthday = Birthday(day=now_msk.day, month=now_msk.month, year=birth_year)
+    async def _update_birthday(self, target_date=None):
+        if target_date is None:
+            target_date = datetime.now(self.moscow_tz).date()
+
+        birth_year = target_date.year - self.config["age"]
+        birthday = Birthday(day=target_date.day, month=target_date.month, year=birth_year)
         try:
             await self._client(UpdateBirthdayRequest(birthday=birthday))
         except Exception:
@@ -63,16 +65,32 @@ class BirthdayChangerMod(loader.Module):
     async def _birthday_loop(self):
         await self._update_birthday()
         while True:
-            next_midnight = self._get_next_midnight()
             now_msk = datetime.now(self.moscow_tz)
-            sleep_seconds = (next_midnight - now_msk).total_seconds()
-            await asyncio.sleep(sleep_seconds + 2)
-            await self._update_birthday()
+            next_midnight = self._get_next_midnight()
+            
+            update_time = next_midnight - timedelta(minutes=1)
+
+            if update_time < now_msk:
+               next_midnight += timedelta(days=1)
+               update_time = next_midnight - timedelta(minutes=1)
+
+            sleep_seconds = (update_time - now_msk).total_seconds()
+            await asyncio.sleep(sleep_seconds)
+            
+            await self._update_birthday(target_date=next_midnight.date())
+            
+            await asyncio.sleep(61)
 
     def _get_remaining_time_str(self):
-        next_midnight = self._get_next_midnight()
         now_msk = datetime.now(self.moscow_tz)
-        remaining = next_midnight - now_msk
+        next_midnight = self._get_next_midnight()
+        update_time = next_midnight - timedelta(minutes=1)
+
+        if update_time < now_msk:
+            next_midnight += timedelta(days=1)
+            update_time = next_midnight - timedelta(minutes=1)
+
+        remaining = update_time - now_msk
         
         hours, remainder = divmod(remaining.seconds, 3600)
         minutes, seconds = divmod(remainder, 60)
