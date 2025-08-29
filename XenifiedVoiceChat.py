@@ -11,14 +11,15 @@
 # meta developer: @XenSideMOD
 #
 import sys
+import os
 if sys.version_info >= (3, 12):
     raise RuntimeError("This module is not compatible with Python 3.12+ and requires Python 3.11 or lower.")
-
+if "userland" in os.environ.get("USER", ""):
+    raise RuntimeError("This module is NOT compatible with UserLAnd.'")
 import asyncio
 import atexit
 import contextlib
 import logging
-import os
 import re
 import shutil
 import tempfile
