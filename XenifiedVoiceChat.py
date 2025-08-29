@@ -1,5 +1,4 @@
 # requires: py-tgcalls==0.9.7
-
 #
 # ░█░█░█▀▀░█▀█░█▀▀░▀█▀░█▀▄░█▀▀
 # ░▄▀▄░█▀▀░█░█░▀▀█░░█░░█░█░█▀▀
@@ -10,6 +9,9 @@
 # 🌐 https://www.gnu.org/licenses/agpl-3.0.html
 # meta developer: @XenSideMOD
 #
+import sys
+if sys.version_info >= (3, 12):
+    raise RuntimeError("This module is not compatible with Python 3.12+ and requires Python 3.11 or lower.")
 
 import asyncio
 import atexit
@@ -56,6 +58,7 @@ class XenifiedVoiceChatMod(loader.Module):
         "joined": "🎙 <b>Joined VoiceChat</b>",
         "no_reply": "🚫 <b>Reply to an audio or video file</b>",
         "no_queue": "🚫 <b>Queue is empty</b>",
+        "not_playing": "🚫 <b>Nothing is playing right now.</b>",
         "queue": "🎙 <b>Queue</b>:\n\n{}",
         "queueadd": "🎧 <b>{} added to queue</b>",
         "queueaddv": "🎬 <b>{} added to queue</b>",
@@ -76,9 +79,9 @@ class XenifiedVoiceChatMod(loader.Module):
 
     _calls = {}
     _muted = {}
-    _forms = {}
     _queue = {}
     _loop = {}
+    _paused = {}
 
     def __init__(self):
         self.config = loader.ModuleConfig(
@@ -114,7 +117,6 @@ class XenifiedVoiceChatMod(loader.Module):
                 self._on_event_update = HandlersHolder()
                 self._binding = Binding(
                     kwargs.get("overload_quiet_mode", False),
-                    kwargs.get("multi_thread", False),
                 )
                 atexit.register(
                     lambda: self._async_core.cancel()
@@ -157,13 +159,14 @@ class XenifiedVoiceChatMod(loader.Module):
 
     def _cleanup_chat(self, chat_id: int):
         self._queue.pop(chat_id, None)
-        self._forms.pop(chat_id, None)
         self._muted.pop(chat_id, None)
         self._calls.pop(chat_id, None)
         self._loop.pop(chat_id, None)
+        self._paused.pop(chat_id, None)
 
     async def _play_raw(self, chat_id: int, stream, reattempt: bool = False):
         self._muted.setdefault(chat_id, False)
+        self._paused.setdefault(chat_id, False)
         self._calls[chat_id] = True
         try:
             await self._app.join_group_call(
@@ -202,15 +205,14 @@ class XenifiedVoiceChatMod(loader.Module):
             return
 
         mime_type = reply.document.mime_type
-        if "audio" in mime_type:
-            is_audio = True
-        elif "video" in mime_type:
-            is_audio = False
-        else:
+        is_audio = "audio" in mime_type
+        is_video = "video" in mime_type
+
+        if not is_audio and not is_video:
             await utils.answer(message, self.strings("no_reply"))
             return
 
-        message = await utils.answer(message, self.strings("downloading"))
+        msg = await utils.answer(message, self.strings("downloading"))
 
         raw_data = await self._client.download_file(reply.document, bytes)
         filename = self._get_fn(reply)
@@ -222,9 +224,10 @@ class XenifiedVoiceChatMod(loader.Module):
             "data": raw_data, "filename": filename, "audio": is_audio, "stream": None
         })
 
-        await utils.answer(message, self.strings("queueadd" if is_audio else "queueaddv").format(filename))
+        await utils.answer(msg, self.strings("queueadd" if is_audio else "queueaddv").format(filename))
+        
         if len(self._queue[chat_id]) == 1:
-            await self._play_from_queue(chat_id)
+            await self._play_from_queue(chat_id, message=message)
 
     @loader.command(ru_doc="Переключить трек")
     async def qnext(self, message: Message):
@@ -270,6 +273,16 @@ class XenifiedVoiceChatMod(loader.Module):
                 "args": (chat_id, index + 1),
             } for index, item in enumerate(self._queue[chat_id][1:])]
         )
+        
+    @loader.command(ru_doc="Открыть панель управления плеером")
+    async def qpanel(self, message: Message):
+        """Opens the player control panel"""
+        chat_id = utils.get_chat_id(message)
+        if chat_id not in self._calls or not self._queue.get(chat_id):
+            await utils.answer(message, self.strings("not_playing"))
+            return
+
+        await self._update_inline_form(chat_id, message=message)
 
     async def _inline_delete(self, call: InlineCall, chat_id: int, index: int):
         del self._queue[chat_id][index]
@@ -277,10 +290,19 @@ class XenifiedVoiceChatMod(loader.Module):
         await call.delete()
 
     async def _handle_stream_change(self, call, chat_id, action):
-        actions = {"pause": self._app.pause_stream, "resume": self._app.resume_stream, "mute": self._app.mute_stream, "unmute": self._app.unmute_stream}
-        await actions[action](chat_id)
-        if action in ["mute", "unmute"]:
-            self._muted[chat_id] = action == "mute"
+        if action == "pause":
+            await self._app.pause_stream(chat_id)
+            self._paused[chat_id] = True
+        elif action == "resume":
+            await self._app.resume_stream(chat_id)
+            self._paused[chat_id] = False
+        elif action == "mute":
+            await self._app.mute_stream(chat_id)
+            self._muted[chat_id] = True
+        elif action == "unmute":
+            await self._app.unmute_stream(chat_id)
+            self._muted[chat_id] = False
+            
         await self._update_inline_form(chat_id, call=call)
 
     async def _inline_toggle_loop(self, call: InlineCall, chat_id: int):
@@ -289,8 +311,11 @@ class XenifiedVoiceChatMod(loader.Module):
         await self._update_inline_form(chat_id, call=call)
 
     async def _inline_stop(self, call: InlineCall, chat_id: int):
+        chat_id = call.chat_id
         self._cleanup_chat(chat_id)
-        await self._app.leave_group_call(chat_id)
+        with contextlib.suppress(Exception):
+            await self._app.leave_group_call(chat_id)
+        
         await utils.answer(call, self.strings("stopped"))
         with contextlib.suppress(Exception):
             await call.delete()
@@ -310,13 +335,12 @@ class XenifiedVoiceChatMod(loader.Module):
         if len(queue) > 1:
             msg = self.strings("playing_with_next").format(current_track, utils.escape_html(queue[1]["filename"]))
 
-        try: is_playing = self._app.get_call(chat_id).status == "playing"
-        except Exception: is_playing = True
-
+        is_paused = self._paused.get(chat_id, False)
         is_looping = self._loop.get(chat_id, False)
+        is_muted = self._muted.get(chat_id, False)
 
-        play_pause_btn = {"text": self.strings("pause"), "callback": self._handle_stream_change, "args": (chat_id, "pause")} if is_playing else {"text": self.strings("play"), "callback": self._handle_stream_change, "args": (chat_id, "resume")}
-        mute_unmute_btn = {"text": self.strings("mute"), "callback": self._handle_stream_change, "args": (chat_id, "mute")} if not self._muted.get(chat_id, False) else {"text": self.strings("unmute"), "callback": self._handle_stream_change, "args": (chat_id, "unmute")}
+        play_pause_btn = {"text": self.strings("play"), "callback": self._handle_stream_change, "args": (chat_id, "resume")} if is_paused else {"text": self.strings("pause"), "callback": self._handle_stream_change, "args": (chat_id, "pause")}
+        mute_unmute_btn = {"text": self.strings("unmute"), "callback": self._handle_stream_change, "args": (chat_id, "unmute")} if is_muted else {"text": self.strings("mute"), "callback": self._handle_stream_change, "args": (chat_id, "mute")}
         loop_btn = {"text": self.strings("looping") if is_looping else self.strings("loop"), "callback": self._inline_toggle_loop, "args": (chat_id,)}
 
         markup = [[play_pause_btn, mute_unmute_btn, loop_btn], [{"text": self.strings("stop"), "callback": self._inline_stop, "args": (chat_id,)}]]
@@ -334,38 +358,16 @@ class XenifiedVoiceChatMod(loader.Module):
         try:
             if call:
                 await call.edit(msg, reply_markup=markup)
-            elif self._forms.get(chat_id):
-                await self._forms[chat_id].edit(msg, reply_markup=markup)
             elif message:
-                self._forms[chat_id] = await utils.answer(message, msg, reply_markup=markup)
-            else:
-                self._forms[chat_id] = await self.inline.form(message=chat_id, text=msg, reply_markup=markup)
+                await utils.answer(message, msg, reply_markup=markup)
         except Exception:
             pass
 
-    @loader.command(ru_doc="Приостановить воспроизведение")
-    async def qpause(self, message: Message):
-        """Pause current chat's queue"""
-        chat_id = utils.get_chat_id(message)
-        await self._app.pause_stream(chat_id)
-        await self._update_inline_form(chat_id, message)
-
-    @loader.command(ru_doc="Остановить воспроизведение")
-    async def qstop(self, message: Message):
-        """Stop current chat's queue"""
-        await self._inline_stop(message, utils.get_chat_id(message))
-
-    @loader.command(ru_doc="Продолжить воспроизведение")
-    async def qresume(self, message: Message):
-        """Resume current chat's queue"""
-        chat_id = utils.get_chat_id(message)
-        await self._app.resume_stream(chat_id)
-        await self._update_inline_form(chat_id, message)
-
-    async def _play_from_queue(self, chat_id: int):
+    async def _play_from_queue(self, chat_id: int, message: Message = None):
         queue = self._queue.get(chat_id, [])
         if not queue: return
 
+        self._paused[chat_id] = False
         item = queue[0]
         is_audio = item["audio"]
         suffix = "ogg" if is_audio else "mp4"
@@ -384,5 +386,6 @@ class XenifiedVoiceChatMod(loader.Module):
 
         await self._play_raw(chat_id, stream)
         await asyncio.sleep(1)
-        if not self.config["silent_queue"]:
-            await self._update_inline_form(chat_id)
+        
+        if not self.config["silent_queue"] and message:
+            await self._update_inline_form(chat_id, message=message)
