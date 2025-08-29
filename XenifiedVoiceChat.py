@@ -1,4 +1,5 @@
 # requires: py-tgcalls==0.9.7
+
 #
 # ░█░█░█▀▀░█▀█░█▀▀░▀█▀░█▀▄░█▀▀
 # ░▄▀▄░█▀▀░█░█░▀▀█░░█░░█░█░█▀▀
@@ -311,7 +312,6 @@ class XenifiedVoiceChatMod(loader.Module):
         await self._update_inline_form(chat_id, call=call)
 
     async def _inline_stop(self, call: InlineCall, chat_id: int):
-        chat_id = call.chat_id
         self._cleanup_chat(chat_id)
         with contextlib.suppress(Exception):
             await self._app.leave_group_call(chat_id)
