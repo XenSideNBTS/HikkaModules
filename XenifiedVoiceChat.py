@@ -16,6 +16,8 @@ if sys.version_info >= (3, 12):
     raise RuntimeError("This module is not compatible with Python 3.12+ and requires Python 3.11 or lower.")
 if "userland" in os.environ.get("USER", ""):
     raise RuntimeError("This module is NOT compatible with UserLAnd.'")
+if "SHARKHOST" in os.environ:
+    raise RuntimeError("This module will overflow your memory of SharkHost and may lead to crash of your userbot!")
 import asyncio
 import atexit
 import contextlib
